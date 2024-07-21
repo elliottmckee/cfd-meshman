@@ -192,7 +192,7 @@ def gmsh_edge_writer(filename, output_grid):
     output_file.write('$EndElements\n')
 
     output_file.close()
-    return
+    
 
 # GMSH Edge Ascii format writer
 # Node ordering is 1-Based

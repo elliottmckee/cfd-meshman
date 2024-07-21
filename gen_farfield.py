@@ -18,7 +18,7 @@ ENV_ACTIVATE_ALIAS = 'activate_mesh_tools'
 
 
 
-def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2, numthreads=4):
+def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2, numthreads=6):
     '''
     TODO: 
         - I TRIED TO MAKE THIS WITH OPENCASCADE BUT WAS HAVING ISSUES. AM PROBABLY JUST DUMB
@@ -155,13 +155,19 @@ def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2,
     
     
     gmsh.initialize()
+    gmsh.option.setNumber('Geometry.Tolerance', 1e-16)
     gmsh.option.setNumber("General.NumThreads", numthreads)
     gmsh.model.add("model_1")
 
     # Merge in BLMESH, make surface loops with tagged surfs (i think only works in gmsh kernel. see notes above tho)
     gmsh.merge(bl_meshfile)
-    # gmsh.model.geo.addSurfaceLoop([1], 1)
-    gmsh.model.geo.addSurfaceLoop([2], 2) # THIS TAG CHANGES SOMETIMES...?? 
+    
+    ####################################################################################
+    # THESE TAGS CHANGES SOMETIMES...??IF YOU ARE HAVING ISSUES TRY CHANGING THIS FIRST, may have to change things below (extend field)
+    ####################################################################################
+    gmsh.model.geo.addSurfaceLoop([0], 1) 
+    gmsh.model.geo.addSurfaceLoop([1], 2) 
+    # gmsh.model.geo.addSurfaceLoop([2], 2) 
     
     # Create Farfield
     sphere_sl = gmsh_sphere_surf(x=0, y=0, z=0, r=farfield_radius, lc=farfield_Lc, surf_tag=50, physical_group=3)
@@ -173,8 +179,9 @@ def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2,
     gmsh.model.geo.remove_all_duplicates()
     gmsh.model.geo.synchronize()
 
+
     # 1 is inner, 2 is outer NOT ALWAYS..?
-    # gmsh.model.addPhysicalGroup(2, [1], 1)
+    gmsh.model.addPhysicalGroup(2, [0], 1)
     # gmsh.model.addPhysicalGroup(2, [2], 2)
     gmsh.model.addPhysicalGroup(3, [0], 1) # BL MESH VOLUME I ARBITRARILY SET THIS SHIT TO 0 IN UGRID READER
     # gmsh.model.addPhysicalGroup(2, [sphere_sl], 4)
@@ -183,13 +190,59 @@ def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2,
     # Extend size field, see extend_field.py example
     #   Can't figure out how to get this field to act on sphere farfield. But we can just be smart about 
     #   how we set DistMax and SizeMax, relative to the sphere size to get basically the same result
-    f = gmsh.model.mesh.field.add("Extend")
-    gmsh.model.mesh.field.setNumbers(f, "SurfacesList", [2])
+    f_extend = gmsh.model.mesh.field.add("Extend")
+    gmsh.model.mesh.field.setNumbers(f_extend, "SurfacesList", [1])
     # # gmsh.model.mesh.field.setNumbers(f, "CurvesList", [e[1] for e in gmsh.model.getEntities(1)])    
-    gmsh.model.mesh.field.setNumber(f, "DistMax", farfield_radius)
-    gmsh.model.mesh.field.setNumber(f, "SizeMax", farfield_Lc)
-    gmsh.model.mesh.field.setNumber(f, "Power", extend_power)
-    gmsh.model.mesh.field.setAsBackgroundMesh(f)
+    gmsh.model.mesh.field.setNumber(f_extend, "DistMax", farfield_radius)
+    gmsh.model.mesh.field.setNumber(f_extend, "SizeMax", farfield_Lc)
+    gmsh.model.mesh.field.setNumber(f_extend, "Power", extend_power)
+
+
+    f_wake = gmsh.model.mesh.field.add("Cylinder")
+    gmsh.model.mesh.field.setNumber(f_wake, "VIn",  0.03)
+    gmsh.model.mesh.field.setNumber(f_wake, "VOut", 1e22)
+    gmsh.model.mesh.field.setNumber(f_wake, "XAxis", 0.4)
+    gmsh.model.mesh.field.setNumber(f_wake, "YAxis", 0)
+    gmsh.model.mesh.field.setNumber(f_wake, "ZAxis", 0)
+    gmsh.model.mesh.field.setNumber(f_wake, "XCenter", -0.1)
+    gmsh.model.mesh.field.setNumber(f_wake, "YCenter", 0.0)
+    gmsh.model.mesh.field.setNumber(f_wake, "ZCenter", 0.0)
+    gmsh.model.mesh.field.setNumber(f_wake, "Radius",  0.3) 
+
+
+    f_shoulder = gmsh.model.mesh.field.add("Cylinder")
+    gmsh.model.mesh.field.setNumber(f_shoulder, "VIn",  0.025)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "VOut", 1e22)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "XAxis", 0.03)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "YAxis", 0)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "ZAxis", 0)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "XCenter", 1.53)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "YCenter", 0.0)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "ZCenter", 0.0)
+    gmsh.model.mesh.field.setNumber(f_shoulder, "Radius",  0.25) 
+
+
+    f_tip = gmsh.model.mesh.field.add("Ball")   
+    gmsh.model.mesh.field.setNumber(f_tip, "Radius",  0.03)
+    gmsh.model.mesh.field.setNumber(f_tip, "Thickness",  0.05)
+    gmsh.model.mesh.field.setNumber(f_tip, "VIn",  0.01)
+    gmsh.model.mesh.field.setNumber(f_tip, "VOut",  1e22)
+    gmsh.model.mesh.field.setNumber(f_tip, "XCenter",  1.9)
+
+    f_tip2 = gmsh.model.mesh.field.add("Ball")   
+    gmsh.model.mesh.field.setNumber(f_tip2, "Radius",  0.15)
+    gmsh.model.mesh.field.setNumber(f_tip2, "Thickness",  0.1)
+    gmsh.model.mesh.field.setNumber(f_tip2, "VIn",  0.03)
+    gmsh.model.mesh.field.setNumber(f_tip2, "VOut",  1e22)
+    gmsh.model.mesh.field.setNumber(f_tip2, "XCenter",  1.9)
+
+
+    f_min_all = gmsh.model.mesh.field.add("Min")
+    gmsh.model.mesh.field.setNumbers(f_min_all, "FieldsList", [f_extend, f_wake, f_shoulder, f_tip, f_tip2])
+
+
+    # gmsh.model.mesh.field.setAsBackgroundMesh(f_extend)
+    gmsh.model.mesh.field.setAsBackgroundMesh(f_min_all)
 
     # Options
     gmsh.option.setNumber("Mesh.Algorithm3D", 10)
@@ -199,7 +252,7 @@ def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2,
 
     # Generate
     gmsh.model.mesh.generate(3)
-
+                
     # Postprocess
     gmsh.model.mesh.remove_duplicate_nodes()
     gmsh.model.mesh.remove_duplicate_elements()
@@ -207,21 +260,20 @@ def gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=2, extend_power=2,
     # Save
     # gmsh.option.setNumber("Mesh.SaveAll", 1)
     gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
-
     outfile_stem = f'{Path(bl_meshfile).stem}_VOLMESHED'
     gmsh.write(outfile_stem+'.msh')
 
     gmsh.finalize()
 
-    # Convert to ugrid
-    # print('Converting to .ugrid...\n')
-    # mesh = UMesh(outfile_stem+'.msh')
-    # mesh.write(outfile_stem+'.ugrid')
+    # Convert to ugrid (NEED TO DELETE INTERNAL INTERFACE FIRST)
+    #print('Converting to .ugrid...\n')
+    #mesh = UMesh(outfile_stem+'.msh')
+    #mesh.write(outfile_stem+'.ugrid')
 
     # Convert to VTK
-    # print('Converting to .vtk...\n')
-    # cmd = f'{ENV_ACTIVATE_ALIAS}; meshio convert {outfile_stem}.msh {outfile_stem}.vtk'
-    # result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    print('Converting to .vtk...\n')
+    cmd = f'meshio convert {outfile_stem}.msh {outfile_stem}.vtk'
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
     
 
@@ -252,7 +304,7 @@ def gen_sphere():
 
     # go to work
     gmsh.model.geo.synchronize()
-    gmsh.model.mesh.generate(2)
+    gmsh.model.mesh.generate(3)
 
     
 
@@ -275,8 +327,49 @@ if __name__ == "__main__":
 
     
     # bl_meshfile = 'pipe_dev/box_trisurfs_BLMESH.msh'
-    bl_meshfile = os.path.join('stubby_test_v1', 'Fin_Can_Stubby_trisurf_v1p2_BLMESH.msh')
-    gen_farfield(bl_meshfile, farfield_radius=5, farfield_Lc=1, extend_power=.5)
+    #bl_meshfile = os.path.join('stubby_test_v1', 'Fin_Can_Stubby_trisurf_v1p2_BLMESH.msh')
+    #gen_farfield(bl_meshfile, farfield_radius=5, farfield_Lc=1, extend_power=.5)   
+
+
+    #bl_meshfile = os.path.join('rockettest_v1', 'rocket_v1_BLMESH.msh')
+    #gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=6, extend_power=.75)
+
+    # bl_meshfile = os.path.join('rocket_v2', 'rocket_v2_BLMESH.msh')
+    # gen_farfield(bl_meshfile, farfield_radius=10, farfield_Lc=6, extend_power=.75)
+    #mesh = UMesh('rocket_v2_BLMESH_VOLMESHED_no_int.msh')
+    #mesh.write('rocket_v2_BLMESH_VOLMESHED_no_int.ugrid')
+
+    
+                
+    # bl_meshfile = os.path.join('rocket_v3', 'rocket_v3_BLMESH.msh')
+    # gen_farfield(bl_meshfile, farfield_radius=15, farfield_Lc=20, extend_power=.3)
+    # mesh = UMesh('rocket_v3_BLMESH_VOLMESHED_no_int.msh')
+    # mesh.write('rocket_v3_BLMESH_VOLMESHED_no_int.ugrid')
+
+
+    # bl_meshfile = os.path.join('rocket_v4', 'rocket_v4_BLMESH.msh')
+    # gen_farfield(bl_meshfile, farfield_radius=15, farfield_Lc=30, extend_power=.2)
+    # mesh = UMesh('rocket_v4_BLMESH_VOLMESHED_no_int.msh')
+    # mesh.write('rocket_v4_BLMESH_VOLMESHED_no_int.ugrid')
+
+    # bl_meshfile = os.path.join('rocket_v5', 'rocket_v4  _BLMESH.msh')
+    # gen_farfield(bl_meshfile, farfield_radius=15, farfield_Lc=30, extend_power=.2)
+    # mesh = UMesh('rocket_v5_BLMESH_VOLMESHED_no_int.msh')
+    # mesh.write('rocket_v5_BLMESH_VOLMESHED_no_int.ugrid')
+
+    # bl_meshfile = os.path.join('rocket_v6', 'rocket_v6_BLMESH.msh')
+    # gen_farfield(bl_meshfile, farfield_radius=15, farfield_Lc=25, extend_power=.2)
+    mesh = UMesh('rocket_v6_BLMESH_VOLMESHED_no_int.msh')
+    mesh.write('rocket_v6_BLMESH_VOLMESHED_no_int.ugrid')
+
+    #print('Converting to .ugrid...\n')
+    #mesh = UMesh('rocket_v1_BLMESH_VOLMESHED_no_int.msh')
+    #mesh.write('rocket_v1_BLMESH_VOLMESHED_no_int.ugrid')
+
+    
+
+
+
 
 
 

@@ -10,9 +10,10 @@ class UMesh:
 
     TODO: Can simplify and make less redundant
     - Still kinda think the empty numpy business is funny
+    - Add negative volume checking              
     '''
 
-    float_fmt = {'float_kind':lambda x: "%.16f" % x};
+    float_fmt = {'float_kind':lambda x: "%f" % x};
     int_fmt = {'int_kind':lambda x: "%i" % x}; # Force ints to not have an extra space
 
     el_type_node_counts = {'tris':3, 'quads':4, 'tets':4, 'pyrmds':5, 'prisms':6, 'hexes':8}
@@ -71,6 +72,8 @@ class UMesh:
     @property
     def iter_volume_data(self): return [self.tets, self.pyrmds, self.prisms, self.hexes]
 
+    def scale(self, scaleFac):
+        self.nodes = scaleFac * self.nodes
 
     def read_ugrid(self):
         '''
@@ -133,7 +136,7 @@ class UMesh:
         '''
         https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html
         '''
-        print(f'Writing to {outfile}...')
+        print(f'Writing mesh to {outfile}...')
 
         with open(outfile, 'w') as outfile:
 
@@ -163,6 +166,8 @@ class UMesh:
                 for i_geom in range(geom_data['defs'].shape[0]):
                     out_str = np.array2string(geom_data['defs'][i_geom, :], formatter=self.int_fmt).strip('[ ]')
                     outfile.write(out_str+'\n')
+        
+        print(f'Complete!\n')
 
 
 
@@ -198,6 +203,8 @@ class UMesh:
                     elem_count = elem_count+1
 
             outfile.write('$EndElements\n')
+        
+        print(f'Complete!\n')
 
 
 
@@ -298,6 +305,13 @@ class UMesh:
                 geom_data['defs'][ir,ic] = mapping[geom_data['defs'][ir,ic]]
 
         return OutMesh
+
+    
+
+
+
+
+
 
 
 

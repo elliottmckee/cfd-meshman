@@ -1,19 +1,22 @@
 import os
 import io
+import time
 import numpy as np
 from scipy.spatial import KDTree
 
 
-class UMesh:
+class UMesh:    
     '''
     DOESNT HANDLE THE OPTIONAL FLAGS N THINGS
 
     TODO: Can simplify and make less redundant
     - Still kinda think the empty numpy business is funny
-    - Add negative volume checking              
+    - Add negative volume checking          
+    - Get ugrid writer to work with .18e? not .18f? I think mesh_tools is what is breaking when trying to read in exponential formatted ugrid
+    - VTP writer    
     '''
 
-    float_fmt = {'float_kind':lambda x: "%f" % x};
+    float_fmt = {'float_kind':lambda x: "%.18f" % x};
     int_fmt = {'int_kind':lambda x: "%i" % x}; # Force ints to not have an extra space
 
     el_type_node_counts = {'tris':3, 'quads':4, 'tets':4, 'pyrmds':5, 'prisms':6, 'hexes':8}
@@ -25,6 +28,8 @@ class UMesh:
 
         self.filename = filename
         _, self.file_extension = os.path.splitext(self.filename)
+
+        print(f'Reading in meshfile: {self.filename}')
 
         # Initialize empty numpy arrays for supported element types
         self.nodes = np.empty((0, 3), dtype=np.double)
@@ -66,6 +71,8 @@ class UMesh:
     @property
     def iter_elem_data(self): return [self.tris, self.quads, self.tets, self.pyrmds, self.prisms, self.hexes]
     @property
+    def iter_elem_counts(self): return [self.num_tris, self.num_quads, self.num_tets, self.num_pyrmds, self.num_prisms, self.num_hexes]
+    @property
     def iter_elem_type_strs(self): return ['tris', 'quads', 'tets', 'pyrmds', 'prisms', 'hexes']
     @property
     def iter_boundary_data(self): return [self.tris, self.quads]
@@ -74,6 +81,8 @@ class UMesh:
 
     def scale(self, scaleFac):
         self.nodes = scaleFac * self.nodes
+
+
 
     def read_ugrid(self):
         '''
@@ -114,97 +123,6 @@ class UMesh:
 
             if ufile.readline():
                 print("It looks like there is more file... additional/optional tags may exist, but aren't being read in!")
-
-
-    def write(self, outfile):
-
-        _, ext = os.path.splitext(outfile)
-
-        match ext:
-            case '.ugrid':
-                self.write_ugrid(outfile)
-            case '.msh':
-                Warning('bdr_exclude_tags is being ignored (ironic)')
-                self.write_gmsh_v2(outfile)
-            case _:
-                raise Exception('Invalid extension specified!')
-                
-
-
-
-    def write_ugrid(self, outfile):
-        '''
-        https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html
-        '''
-        print(f'Writing mesh to {outfile}...')
-
-        with open(outfile, 'w') as outfile:
-
-            # write header
-            header = f"{self.num_nodes} {self.num_tris} {self.num_quads} {self.num_tets} {self.num_pyrmds} {self.num_prisms} {self.num_hexes}"
-            outfile.write(header+'\n')
-
-            # write nodes
-            for ii in range(self.num_nodes):
-                out_str = np.array2string(self.nodes[ii, :], formatter=self.float_fmt, separator=' ').strip('[ ]')
-                outfile.write(out_str+'\n')
-
-            # write boundary faces
-            for geom_data in self.iter_boundary_data:
-                for i_geom in range(geom_data['defs'].shape[0]):
-                    out_str = np.array2string(geom_data['defs'][i_geom, :], formatter=self.int_fmt).strip('[ ]')
-                    outfile.write(out_str+'\n')
-
-            # write boundary tags
-            for geom_data in self.iter_boundary_data:
-                for i_geom in range(geom_data['tags'].shape[0]):
-                    out_str = np.array2string(geom_data['tags'][i_geom], formatter=self.int_fmt).strip('[ ]')
-                    outfile.write(out_str+'\n')
-
-            # write volumes
-            for geom_data in self.iter_volume_data:
-                for i_geom in range(geom_data['defs'].shape[0]):
-                    out_str = np.array2string(geom_data['defs'][i_geom, :], formatter=self.int_fmt).strip('[ ]')
-                    outfile.write(out_str+'\n')
-        
-        print(f'Complete!\n')
-
-
-
-    def write_gmsh_v2(self, outfile):
-        '''
-        Making this able to write volumes, to see if I can just read everything into gmsh and not have to stitch together outside
-        https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
-
-        ASSUMING THAT, WHEN WRITING, THAT PHYSICAL AND ELEMENTARY TAGS ARE THE SAME
-        '''
-        print(f'Writing gmsh v2 ASCII to: {outfile}')
-
-        with open(outfile, 'w') as outfile:
-            outfile.write('$MeshFormat\n')
-            outfile.write('2.2 0 8\n')
-            outfile.write('$EndMeshFormat\n')
-
-            outfile.write('$Nodes\n')
-            outfile.write(f'{self.num_nodes}\n')
-            for i in range(self.num_nodes):
-                outfile.write(f'{i+1} {self.nodes[i, 0]} {self.nodes[i, 1]} {self.nodes[i, 2]}\n')
-            outfile.write('$EndNodes\n')
-            
-            outfile.write('$Elements\n')
-            outfile.write(f'{self.num_elements}\n')
-            elem_count = 1
-            for geom_data, geomtype_str in zip(self.iter_elem_data, self.iter_elem_type_strs):
-                gmsh_tag = self.gmsh_type_tags[geomtype_str]
-                for i_geom in range(geom_data['defs'].shape[0]):
-                    curr_elem_str = np.array2string(geom_data['defs'][i_geom,:], formatter=self.int_fmt).strip('[ ]')
-                    geom_tag = str(geom_data['tags'][i_geom]).strip('[ ]');
-                    outfile.write(f'{elem_count} {gmsh_tag} 2 {geom_tag} {geom_tag} '+ curr_elem_str + '\n')
-                    elem_count = elem_count+1
-
-            outfile.write('$EndElements\n')
-        
-        print(f'Complete!\n')
 
 
 
@@ -266,8 +184,105 @@ class UMesh:
         for data in self.iter_elem_data:
             data['defs'] = np.array(data['defs'], dtype=np.uint32)
             data['tags'] = np.array(data['tags'], dtype=np.uint32)
+
+
+    def write(self, outfile):
+
+        start_time = time.time()
+        _, ext = os.path.splitext(outfile)
+
+        match ext:
+            case '.ugrid':
+                self.write_ugrid(outfile)
+            case '.msh':
+                self.write_gmsh_v2(outfile)
+            case _:
+                raise Exception('Invalid extension specified!')
+        
+        print(f'Completed in {time.time()-start_time}!\n')
+
+
+
+    def write_ugrid(self, outfile):
+        '''
+        https://www.simcenter.msstate.edu/software/documentation/ug_io/3d_grid_file_type_ugrid.html
+        '''
+        print(f'Writing ugrid to {outfile}...')
+        
+        with open(outfile, 'w') as outfile:
+
+            # write header
+            header = f"{self.num_nodes} {self.num_tris} {self.num_quads} {self.num_tets} {self.num_pyrmds} {self.num_prisms} {self.num_hexes}"
+            outfile.write(header+'\n')
+
+            # write nodes
+            np.savetxt(outfile, self.nodes, fmt='%.18f')
+
+            # write boundary faces
+            for geom_data in self.iter_boundary_data:
+                np.savetxt(outfile, geom_data['defs'], fmt='%i')
+
+            # write boundary tags
+            for geom_data in self.iter_boundary_data:
+                np.savetxt(outfile, geom_data['tags'], fmt='%i')
+
+            # write volumes
+            for geom_data in self.iter_volume_data:
+                np.savetxt(outfile, geom_data['defs'], fmt='%i')
+
+
+
+    def write_gmsh_v2(self, outfile):
+        '''
+        Making this able to write volumes, to see if I can just read everything into gmsh and not have to stitch together outside
+        https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
+
+        ASSUMING THAT, WHEN WRITING, THAT PHYSICAL AND ELEMENTARY TAGS ARE THE SAME
+        '''
+        print(f'Writing gmsh v2 ASCII to: {outfile}')
+        start_time = time.time()
+
+        # pre-formatting nodes block
+        node_block = np.concatenate((np.arange(1, self.num_nodes+1).reshape(-1,1), self.nodes), axis=1)
+
+        #pre-formatting elements blocks to try and speed things up
+        element_blocks = []
+        ctr_el = 1
+        for geom_data, geomtype_str, geom_num_members in zip(self.iter_elem_data, self.iter_elem_type_strs, self.iter_elem_counts):
+
+            # assuming only 2x tags (element, physical) for now
+            gmsh_tag = self.gmsh_type_tags[geomtype_str]
+            type_numtag_data = np.tile(np.array([gmsh_tag, 2]), (geom_num_members,1))
+
+            # assemble, append block
+            if geom_num_members > 0:
+                data_block = np.concatenate((np.arange(ctr_el, ctr_el+geom_num_members).reshape(-1,1), #god i fucking hate numpy
+                                    type_numtag_data, geom_data['tags'], geom_data['tags'], 
+                                    geom_data['defs']), axis=1)
+                element_blocks.append(data_block)
+
+            #update counter
+            ctr_el = ctr_el+geom_num_members 
+
+
+        with open(outfile, 'w') as outfile:
+            outfile.write('$MeshFormat\n')
+            outfile.write('2.2 0 8\n')
+            outfile.write('$EndMeshFormat\n')
+
+            outfile.write('$Nodes\n')
+            outfile.write(f'{self.num_nodes}\n')
+            np.savetxt(outfile, node_block, fmt=['%i','%.18e','%.18e','%.18e'])
+            outfile.write('$EndNodes\n')
+            
+            outfile.write('$Elements\n')
+            outfile.write(f'{self.num_elements}\n')
+            for block in element_blocks:
+                np.savetxt(outfile, block, fmt='%i')
+            outfile.write('$EndElements\n')
         
 
+    
     def extract_surface(self, bc_target):
         
         print(f'Extracting boundary faces tagged with {bc_target} to new UMesh...')
@@ -314,84 +329,4 @@ class UMesh:
 
 
 
-
-
-
-        
-
-
-if __name__ == "__main__":
-
-
-    # file = 'box_vol'
-    # file = 'box_surf'
-    # file = 'box_surf_BLMESH'
-    # file = 'fin_can_BLMESH'
-    # file = 'box_trisurfs'
-    # file = 'box_trisurfs_BLMESH'
-
-
-    # Mesh = UMesh('pipe_dev/'+file+'.ugrid')
-    # Mesh.write('pipe_dev/'+file+'.msh')
-
-    # Mesh = UMesh('t16.msh')
-    # Mesh.write('t16.ugrid')
-
-
-    # Mesh = UMesh('box_simple_v2/cube.msh')
-    # Mesh.write('box_simple_v2/cube.ugrid')
-
-    # Mesh = UMesh('cube_BLMESH_VOLMESHED_FINAL.msh')
-    # Mesh.write('cube_BLMESH_VOLMESHED_FINAL.ugrid')
-
-    Mesh = UMesh('Fin_Can_Stubby_trisurf_v1p2_FINAL.msh')
-    Mesh.write('Fin_Can_Stubby_trisurf_v1p2_FINAL.ugrid')
-
-    # Scaling
-    # Mesh = UMesh('stubby_test_v1/Fin_Can_Stubby_trisurf_v1p1.msh')
-    # Mesh.nodes = Mesh.nodes/1000
-    # Mesh.write('stubby_test_v1/Fin_Can_Stubby_trisurf_v1p2.msh')
-
-
-
-    # Mesh = UMesh('stubby_test_v1/Fin_Can_Stubby_trisurf_v1.msh')
-    # Mesh.tris['tags'] = Mesh.tris['tags']+1
-    # Mesh.write('Fin_Can_Stubby_trisurf_v1p1.msh')
-
-
-
-
-
-
-    # STEP 1: SURFACE .MSH TO UGRID
-    # Mesh = UMesh(file+'.msh')
-    # Mesh.write(file+'.ugrid')
-
-    # STEP 1.5 OPTIONAL CHECK IF CONVERTING BACK TO GMSH BREAKS THINGS
-    # Mesh = UMesh(file+'.ugrid')
-    # Mesh.write_gmsh_v2(file+'_TEST.msh')
-
-    # STEP 2: mesh_convert.py -i file.ugrid
-
-    # MISSING THE EXTRUDE STEP HERE LOL
-
-    # STEP 3: 
-    # Mesh = UMesh(file+'_BLMESH.ugrid')
-    # ExtractedSurfMesh = Mesh.extract_surface(bc_target=2)
-    # ExtractedSurfMesh.write_gmsh_v2(file+'_BLMESH_CAP.msh')
-
-
-    # Mesh = UMesh(file+'.ugrid')
-    # Mesh = UMesh(file+'.msh')
-
-    # Mesh.write(file+'_bidirectional_convert_check'+'.ugrid')
-    # Mesh.write_gmsh_v2(file+'_bidirectional_convert_check.msh')
-
-
-    # ExtractedSurfMesh = Mesh.extract_surface(bc_target=2)
-    # ExtractedSurfMesh.write(file+'_extracted_surfmesh.ugrid')
-    # ExtractedSurfMesh.write_gmsh_v2(file+'_extracted_surf.msh')
-
-
-    print('Done!')
 

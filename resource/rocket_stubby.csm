@@ -1,0 +1,326 @@
+# Engineering Sketchpad
+# parametric rocket geo generator
+# written by Elliott McKee
+# units m
+# TODO
+# - Make fins a udprim?
+
+
+
+
+############################
+# PARAMETERS
+######
+DESPMTR B:diam 6*0.0254
+DESPMTR B:len  15*0.0254
+
+DESPMTR F:Croot 12*0.0254
+DESPMTR F:Ctip  5*0.0254
+DESPMTR F:Span  6*0.0254
+DESPMTR F:th    0.5*0.0254
+DESPMTR F:Swp_LE_deg 60
+DESPMTR F:Cham_deg 10
+DESPMTR F:tip_R .003     # NEED TO COMMENT/UNCOMMENT BELOW WHEN GOING FROM SHARP/ROUND OR VV
+
+DESPMTR F:fillet .7*0.0254
+DESPMTR F:base_offset .75*0.0254
+DESPMTR F:num 4
+
+DESPMTR NOSE:rad 0.02      
+DESPMTR NOSE:angd 10
+
+DESPMTR BOAT:len        2*0.0254
+DESPMTR BOAT:aft_diam   5*0.0254
+
+
+
+
+############################
+# SINGLE FIN
+######
+# Making this ruled instead, for simplicity
+# JK, all the grown surfaces cause issues when filleting. Going back to old way
+
+
+### FIN PLANFORM
+SKBEG       0                                           0           0
+   linseg   F:Croot                                     0           0
+   linseg   F:Croot-F:Span*tand(F:Swp_LE_deg)           F:Span      0
+   linseg   F:Croot-F:Span*tand(F:Swp_LE_deg)-F:Ctip    F:Span      0
+   linseg   0        0            0
+SKEND
+EXTRUDE 0 0 F:th
+TRANSLATE 0 0 -F:th/2
+
+
+### LEADING EDGE - boolean for chamfers (UGH)
+set OFF (F:th/2/tand(F:Cham_deg))
+skbeg       F:Croot                                0           0
+   linseg   F:Croot-OFF                            0           F:th/2
+   linseg   F:Croot-OFF+0.1                         0           F:th/2
+   linseg   F:Croot-OFF+0.1                         0           -F:th/2
+   linseg   F:Croot-OFF                            0           -F:th/2
+   linseg   F:Croot                                0           0
+skend
+
+extrude -sind(F:Swp_LE_deg) cosd(F:Swp_LE_deg) 0
+subtract
+
+
+### TRAILING EDGE - boolean for chamfers (UGH)
+skbeg       0                             0           0
+   linseg   OFF                           0           F:th/2
+   linseg   OFF-0.1                       0           F:th/2
+   linseg   OFF-0.1                       0           -F:th/2
+   linseg   OFF                           0           -F:th/2
+   #linseg   -0.1                           0           0
+   linseg   0                             0           0
+skend
+
+extrude F:Croot-F:Span*tand(F:Swp_LE_deg)-F:Ctip F:Span 0
+subtract
+
+
+### RADII
+IFTHEN F:tip_R GT 0
+    SELECT EDGE 16 3 16 7 1
+    SELECT ADD  25 3 25 7 1
+    fillet F:tip_R @sellist 1
+ENDIF
+
+STORE _FIN
+
+
+### FILLET IMPRINTER
+set dx F:fillet/2 # axial length buffer for fillet, kinda arbitrary
+
+# draw root cross section
+set fx1 -dx
+set fx2 F:th/2/tand(F:Cham_deg)
+set fx3 F:Croot-fx2
+set fx4 F:Croot+dx
+
+set fz F:th/2+F:fillet
+
+skbeg       fx1                           0           0
+   linseg   fx2                           0           -fz
+   linseg   fx3                           0           -fz
+   linseg   fx4                           0         0
+   linseg   fx3                           0           fz
+   linseg   fx2                           0         fz
+   linseg   fx1                           0         0
+skend
+
+EXTRUDE   0 2*F:fillet 0
+
+# grab min/max x edges to fillet
+SELECT    EDGE
+SELECT    SORT   $xmin
+DIMENSION foo    18 1
+SET       foo    @sellist
+SELECT    EDGE   foo[1]
+SELECT    ADD    foo[18]
+    ATTRIBUTE _color $red
+
+
+IFTHEN F:tip_R GT 0
+    fillet 4.0*F:tip_R @sellist 1
+ENDIF
+
+EXTRACT 0
+STORE _IMPRINTER
+
+
+
+
+############################
+# BODY
+######
+CYLINDER  0 0 0   B:len 0 0  B:diam/2
+SELECT    FACE
+   ATTRIBUTE tagComp   $body
+SELECT    EDGE
+   ATTRIBUTE tagComp   $body
+STORE _BODY
+
+
+
+
+############################
+# FIN ASSEMBLY
+######
+
+# workaround, since fin base will be tangent to cylinder, if we dont do the math to correct for it
+set OFF_FIN sqrt((B:diam/2)^2-(F:th/2)^2)
+set F_deg_inc 360/F:num
+
+# tried offset udprim with faces and edges, the smart way- it generated, but didnt work as intended
+# now imprinting manually
+#UDPRIM    offset    dist      F:fillet  # I think this is ill defined for things with sharp edges? I dont think we'd want this for imprinter anyways
+
+
+### IMPRINT FIN
+RESTORE _FIN
+BOX -1 F:fillet -1 2 0 2
+SUBTRACT
+TRANSLATE F:base_offset OFF_FIN 0
+STORE _FIN_IMPRINTED
+
+
+### IMPRINT BODY
+RESTORE _BODY
+RESTORE _IMPRINTER
+TRANSLATE F:base_offset OFF_FIN-F:fillet 0
+SUBTRACT
+STORE _BODY_IMPRINTED
+
+# Pick faces on FIN
+RESTORE _FIN_IMPRINTED
+SELECT    FACE
+SELECT    SORT   $ymin
+DIMENSION foo    9 1
+SET       foo    @sellist
+SELECT    FACE   foo[1]
+SELECT    ADD    foo[2]
+SELECT    ADD    foo[3]
+SELECT    ADD    foo[4]
+SELECT    ADD    foo[5]
+SELECT    ADD    foo[6]
+SELECT    ADD    foo[7]
+SELECT    ADD    foo[8]                                             # COMMENT THIS AND BELOW IF NO LE RADIUS
+SELECT    ADD    foo[9]                                             #
+    ATTRIBUTE _color $cyan
+    ATTRIBUTE _flend $remove
+
+# Pick faces on BODY
+RESTORE _BODY_IMPRINTED
+SELECT    FACE
+SELECT    SORT   $ymax
+DIMENSION bar    3 1
+SET       bar    @sellist   # idk why this indexing is borked
+SELECT    FACE   bar[3]
+#SELECT    ADD    bar[2]
+#SELECT    ADD    bar[3]
+    ATTRIBUTE _color $cyan
+    ATTRIBUTE _flend $remove
+
+# FLEND
+UDPARG    flend     slopea    1
+UDPARG    flend     slopeb    1
+UDPARG    flend     equis     1
+UDPARG    flend     toler     0.0001
+UDPARG    flend     npnt      12
+UDPRIM    flend     method    2
+
+
+# LETS JUST UNION SHIT TO GET MULTIPLE FINS
+STORE _BODY_FIN
+RESTORE _BODY_FIN
+
+PATBEG idx_fin F:num
+   RESTORE _BODY_FIN
+   ROTATEX idx_fin*F_deg_inc
+   UNION 0 0 1e-4
+PATEND
+
+STORE _BODY_FINS
+
+
+
+
+
+############################
+# BOATTAIL
+######
+
+UDPRIM supell rx B:diam/2   ry B:diam/2   n 2.0
+
+UDPRIM supell rx B:diam/2   ry B:diam/2   n 2.0
+TRANSLATE 0 0 -.00001
+
+UDPRIM supell rx BOAT:aft_diam/2 ry  BOAT:aft_diam/2   n 2.0
+TRANSLATE 0 0 -BOAT:len
+
+#RULE
+BLEND
+
+ROTATEY 90
+
+RESTORE _BODY_FINS
+UNION 0 0 1e-4
+
+STORE _BODY_FINS_BOAT
+
+
+
+
+
+############################
+# NOSECONE - SPHERICALLY BLUNTED
+######
+# See wikipedia: https://en.wikipedia.org/wiki/Nose_cone_design
+SET R B:diam/2
+SET L R/tand(NOSE:angd)
+
+SET x_t L^2/R*sqrt(NOSE:rad^2/(R^2+L^2))
+SET y_t x_t*R/L
+SET x_0 x_t+sqrt(NOSE:rad^2-y_t^2)
+SET x_a x_0-NOSE:rad
+
+
+SKBEG       L       0       0
+    LINSEG  L       R       0
+    LINSEG  x_t     y_t     0
+    CIRARC  x_a     1E-6    0   x_a     0   0
+    LINSEG  L       0       0
+SKEND
+REVOLVE 0 0 0 1 0 0 180 # doing the mirror approach as getting weird things in GMSH
+STORE _temp
+RESTORE _temp
+MIRROR 0 0 1
+RESTORE _temp
+UNION 0 0 1e-4
+ROTATEZ 180
+TRANSLATE L 0 0
+TRANSLATE B:len 0 0
+
+# Attach to body
+RESTORE _BODY_FINS_BOAT
+UNION 0 0 1e-4
+
+
+
+############################
+# OUTPUT
+######
+#DUMP $/dump_1.brep  0  0  0
+DUMP $/rocket_stubby.step  0  0  0
+
+
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

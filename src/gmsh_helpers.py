@@ -48,3 +48,29 @@ def sphere_surf(x, y, z, r, lc, surf_tag, physical_group):
         gmsh.model.geo.synchronize()
         gmsh.model.addPhysicalGroup(2, [s1, s2, s3, s4, s5, s6, s7, s8], physical_group)
         return sl
+
+
+def collect_size_fields(size_fields_dict):
+        # GMSH didn't like me trying to pass size fields directly through/into functions that build meshes
+        # so just using a dictionary outside the function + this helper to mirror this functionality
+        # in a pythonic fashion
+        
+        gmsh_size_fields = [];
+        
+        # for each size field
+        for size_field, params in size_fields_dict.items():
+                sf_curr = gmsh.model.mesh.field.add(size_field)
+                gmsh_size_fields.append(sf_curr)
+
+                # for each parameter in size field
+                for param, val in params.items():
+                        gmsh.model.mesh.field.setNumber(sf_curr, param, val)
+
+        return gmsh_size_fields
+
+
+
+
+
+
+

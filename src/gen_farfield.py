@@ -8,11 +8,11 @@ import numpy as np
 
 from pathlib import Path
 
-from .gmsh_helpers import sphere_surf
+from .gmsh_helpers import sphere_surf, collect_size_fields
 from .ugrid_tools import UMesh
 
 
-def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.5, numthreads=4):
+def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.5, numthreads=4, size_fields_dict={}):
     '''
     TODO: 
         - I TRIED TO MAKE THIS WORK WITH OPENCASCADE BUT WAS HAVING ISSUES. AM PROBABLY JUST DUMB. TRY AGAIN LATER
@@ -106,44 +106,12 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
     gmsh.model.mesh.field.setNumber(f_extend, "SizeMax", farfield_Lc)
     gmsh.model.mesh.field.setNumber(f_extend, "Power", extend_power)
 
-    f_wake = gmsh.model.mesh.field.add("Cylinder")
-    gmsh.model.mesh.field.setNumber(f_wake, "VIn",  0.03)
-    gmsh.model.mesh.field.setNumber(f_wake, "VOut", 1e22)
-    gmsh.model.mesh.field.setNumber(f_wake, "XAxis", 0.4)
-    gmsh.model.mesh.field.setNumber(f_wake, "YAxis", 0)
-    gmsh.model.mesh.field.setNumber(f_wake, "ZAxis", 0)
-    gmsh.model.mesh.field.setNumber(f_wake, "XCenter", -0.1)
-    gmsh.model.mesh.field.setNumber(f_wake, "YCenter", 0.0)
-    gmsh.model.mesh.field.setNumber(f_wake, "ZCenter", 0.0)
-    gmsh.model.mesh.field.setNumber(f_wake, "Radius",  0.3) 
+    # Collect additional size fields
+    f_additional_size_fields = collect_size_fields(size_fields_dict)
 
-    f_shoulder = gmsh.model.mesh.field.add("Cylinder")
-    gmsh.model.mesh.field.setNumber(f_shoulder, "VIn",  0.025)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "VOut", 1e22)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "XAxis", 0.03)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "YAxis", 0)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "ZAxis", 0)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "XCenter", 1.53)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "YCenter", 0.0)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "ZCenter", 0.0)
-    gmsh.model.mesh.field.setNumber(f_shoulder, "Radius",  0.25) 
-
-    f_tip = gmsh.model.mesh.field.add("Ball")   
-    gmsh.model.mesh.field.setNumber(f_tip, "Radius",  0.03)
-    gmsh.model.mesh.field.setNumber(f_tip, "Thickness",  0.05)
-    gmsh.model.mesh.field.setNumber(f_tip, "VIn",  0.01)
-    gmsh.model.mesh.field.setNumber(f_tip, "VOut",  1e22)
-    gmsh.model.mesh.field.setNumber(f_tip, "XCenter",  1.9)
-
-    f_tip2 = gmsh.model.mesh.field.add("Ball")   
-    gmsh.model.mesh.field.setNumber(f_tip2, "Radius",  0.15)
-    gmsh.model.mesh.field.setNumber(f_tip2, "Thickness",  0.1)
-    gmsh.model.mesh.field.setNumber(f_tip2, "VIn",  0.03)
-    gmsh.model.mesh.field.setNumber(f_tip2, "VOut",  1e22)
-    gmsh.model.mesh.field.setNumber(f_tip2, "XCenter",  1.9)
-
+    # take min across all size fields
     f_min_all = gmsh.model.mesh.field.add("Min")
-    gmsh.model.mesh.field.setNumbers(f_min_all, "FieldsList", [f_extend, f_wake, f_shoulder, f_tip, f_tip2])
+    gmsh.model.mesh.field.setNumbers(f_min_all, "FieldsList", [f_extend]+f_additional_size_fields)
 
     # gmsh.model.mesh.field.setAsBackgroundMesh(f_extend)
     gmsh.model.mesh.field.setAsBackgroundMesh(f_min_all)

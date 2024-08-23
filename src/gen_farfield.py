@@ -17,16 +17,19 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
     TODO: 
         - I TRIED TO MAKE THIS WORK WITH OPENCASCADE BUT WAS HAVING ISSUES. AM PROBABLY JUST DUMB. TRY AGAIN LATER
             See e.g. 't1.py', `t16.py', `t18.py', `t19.py' or `t20.py' for complete examples based on OpenCASCADE, and `examples/api' for more.
-        - MAKE THIS AUTOMATICALLY DELETE THE INTERFACE SURFACE
-        - Make additional size field a passed-in thing
+        - Robustify identification of which tag represents the boundary layer interface/top-cap. 
+        - Clean up "Extend" field implementation
+        - Allow size fields to be passed-in 
+        - Do in tempdir? Add file cleanup functionality?
 
     INPUTS:
         bl_msh_path: str, path to .msh formatted boundary layer mesh (from gen_blmesh.py)
 
     OUTPUTS:
+        VolMesh: UMesh, volume mesh (boundary layer + farfield)
 
     NOTES: 
-        - If things break below- it is likely due to assumptions about surface tagging, mainly for the BLMESH outer-most interface surface. Double check these if issues
+        - If things break below- it is likely due to assumptions about surface tagging, mainly for the BLMESH outer-most interface/top-cap surface. Double check these assumptions if having issues
 
     GMSH tidbits
     # t10.py, Mesh size fields
@@ -59,7 +62,7 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
     '''
 
     # paths
-    volmesh_msh = os.path.splitext(bl_msh_path)[0]+'_VOLMESHED.msh'
+    volmesh_msh = os.path.splitext(bl_msh_path)[0]+'_VOLMESH.msh'
 
     # init gmsh    
     gmsh.initialize()
@@ -67,19 +70,19 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
     gmsh.option.setNumber("General.NumThreads", numthreads)
     gmsh.model.add("model_1")
 
-    # merge in BL mesh file, 
+    # merge in BL mesh file
     gmsh.merge(bl_msh_path)
     
-    # make surface loop based on the tagged surfaces of the blmesh, 
-    # (expected: 0 is the geometric/wall surface, 1 is the "top cap" of the Bl mesh, but I don't think that is guaranteed)
-    # syntax: surfaceTags (vector of integers), tag = -1 (integer) 
+    # make surface loop based on the tagged surfaces of the blmesh
+    # (expected: 0 is the geometric/wall surface, 1 is the "top cap" of the Bl mesh, but I don't think that is 100% guaranteed)
+    # syntax: surfaceTags (vector of integers), tag (integer) 
     eltag_surf_wall      = gmsh.model.geo.addSurfaceLoop([0], 1) 
     eltag_surf_bl_topcap = gmsh.model.geo.addSurfaceLoop([1], 2) 
     
-    # Create Farfield
+    # Create Farfield extents
     eltag_surf_sphere = sphere_surf(x=0, y=0, z=0, r=farfield_radius, lc=farfield_Lc, surf_tag=50, physical_group=3)
 
-    # Create farfield volume (SPHERE-BLMESH_OUTERINTERFACE)
+    # Create Farfield volume (between SPHERE farfield extent and BLMESH outer-interface)
     eltag_vol_farfield = gmsh.model.geo.addVolume([eltag_surf_sphere, eltag_surf_bl_topcap], 60)
     
     # have to synchronize before physical groups
@@ -88,9 +91,9 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
 
     # assign physical groups
     # reminder: all meshes in gmsh must have physical group or will not be written (unless you use the write_all_elements flag in gmsh)
-    # syntax: dim (integer), tags (vector of integers for model entities), tag = -1 (integer for physical surface tag), name = "" (string) 
+    # syntax: dim (integer), tags (vector of integers for model entities), tag (integer for physical surface tag), name (string) 
     phystag_surf_wall    = gmsh.model.addPhysicalGroup(2, [0], 1)
-    phystag_vol_bl       = gmsh.model.addPhysicalGroup(3, [0], 1) # FOR THIS BL MESH VOLUME- I ARBITRARILY SET THIS TO 0 IN UGRID READER
+    phystag_vol_bl       = gmsh.model.addPhysicalGroup(3, [0], 1)   # FOR THIS BL MESH VOLUME- I ARBITRARILY SET THIS TO 0 IN UGRID READER
     phystag_vol_farfield = gmsh.model.addPhysicalGroup(3, [60], 61) # FARFIELD MESH VOLUME
 
     # Extend size field, see extend_field.py example
@@ -161,12 +164,15 @@ def gen_farfield(bl_msh_path, farfield_radius=10, farfield_Lc=2, extend_power=0.
     # Remove interface
     gmsh.model.mesh.removeElements(eltag_surf_bl_topcap, 1)
 
-    # Save
+    # Save out
     # gmsh.option.setNumber("Mesh.SaveAll", 1)
     gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
     gmsh.write(volmesh_msh)
     gmsh.finalize()
 
-    return volmesh_msh
+    # Read back into python as UMesh
+    VolMesh = UMesh(volmesh_msh)
+
+    return VolMesh
 
     

@@ -8,11 +8,11 @@ from .ugrid_tools import UMesh
 from .extrude_config import EXTRUDE_CONFIG
 
 
-def gen_blmesh(surfmesh_ugrid_path, num_bl_layers=10, near_wall_spacing=1e-4, bl_growth_rate=1.2, write_vtk=False):
+def gen_blmesh(surfmesh_ugrid_path, num_bl_layers=10, near_wall_spacing=1e-4, bl_growth_rate=1.3, write_vtk=False):
     ''' 
     TODO: 
-        - MAKE THIS USE A TEMP DIR?
-        - more explicit warnings if failed
+        - MAKE THIS USE A TEMP DIR? Add cleanup command?
+        - more explicit warnings if subprocess calls fail
         - Allow parameter overwrites, or pointing to new default extrude inputs file 
         - Remove clunky interaction with mesh_tools mesh_convert.py, and just add VTP writer to Umesh
         - Output stream of extrude command to pipe for realtime outputs
@@ -24,19 +24,22 @@ def gen_blmesh(surfmesh_ugrid_path, num_bl_layers=10, near_wall_spacing=1e-4, bl
         surfmesh_ugrid_path: str, path to .ugrid surface mesh file to exrude
 
     OUTPUTS: 
+        
         blmesh_msh: str, path to output BL mesh file in .msh format
     '''
 
+    # input checking
+    if not surfmesh_ugrid_path.endswith('.ugrid'):
+        raise TypeError('input must be a .ugrid')
+
     # paths
     base_dir = os.getcwd()
-    work_dir = os.path.dirname(surfmesh_ugrid_path)
+    work_dir = os.path.dirname(surfmesh_ugrid_path) # forcing to build mesh location for now
     
     surfmesh_stem   = Path(surfmesh_ugrid_path).stem
     blmesh_ugrid    = f'{surfmesh_stem}_BLMESH.ugrid'
-    blmesh_msh      = f'{surfmesh_stem}_BLMESH.msh'
     blmesh_vtk      = f'{surfmesh_stem}_BLMESH.vtk'
     blmesh_ugrid_path   = os.path.join(work_dir, blmesh_ugrid)
-    blmesh_msh_path     = os.path.join(work_dir, blmesh_msh)
     blmesh_vtk_path     = os.path.join(work_dir, blmesh_vtk)
     
     # generate layer spacing
@@ -70,19 +73,19 @@ def gen_blmesh(surfmesh_ugrid_path, num_bl_layers=10, near_wall_spacing=1e-4, bl
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result.stdout); print(result.stderr)
 
-    # Change back to base dir
-    os.chdir(base_dir)
-
-    # Read in resultant ugrid, convert to .msh               
-    BLMesh = UMesh(blmesh_ugrid_path)
-    BLMesh.write(blmesh_msh_path)
-    
+    # hacky vtk conversion, since its better at visualization than GMSH
     if write_vtk:
         print(f'Converting BL mesh to VTK using meshio (workaround)...\n')   
-        cmd = f'meshio convert {blmesh_ugrid_path} {blmesh_vtk_path}'
+        cmd = f'meshio convert {blmesh_ugrid} {blmesh_vtk}'
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         print(result.stdout); print(result.stderr) 
 
-    return blmesh_msh_path
+    # Read in resultant mesh            
+    BLMesh = UMesh(blmesh_ugrid)
+
+    # Change back to base dir
+    os.chdir(base_dir)
+
+    return BLMesh
 
     

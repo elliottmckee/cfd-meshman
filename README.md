@@ -18,18 +18,22 @@ _I welcome any help and/or feedback :)_
 
 # Limitations
 - cfd-meshman only supports triangular surfaces meshes right now. Going to fix shortly. All the other tools should be able to handle quads fine.
-- no support for symmetry planes yet, although Mesh_Tools should be able to support them.
+- no support for symmetry planes yet, although Mesh_Tools, GMSH should be able to support them.
 
 
 # Examples
 
 ## example_simple.py
+Just showing the simplest implementation of "extrude boundary layer and generate farfield":
 | **Near** | **Detail** | **Far** |
 | ----------- | ----------- | ----------- |
-| [<img src="resource/example_simple_1.png">](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | [<img src="resource/example_simple_2.png">](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_2.png?raw=true) | [<img src="resource/example_simple_3.png">](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_3.png?raw=true) |
+| [<img src="resource/example_simple_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | [<img src="resource/example_simple_2.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_2.png?raw=true) | [<img src="resource/example_simple_3.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_3.png?raw=true) |
 
 ## example_advanced.py
-Showing application of 
+Showing the use of GMSH size fields to do things like refine the wake or increase resolution at nose tip:
+| **Near** |
+| ----------- |
+| [<img src="resource/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | 
 
 
 
@@ -50,7 +54,12 @@ Being a python package, this is a quick pip install.
 
 
 ## NASA Mesh_Tools
-==DO NOT USE VERSION 1.2. USE VERSION 1.1 (all versions should be included in the ZIP from the NASA request). The "extrude" functionality of v1.2 did not work for me out of the box, and requires code modifications to make it not segfault. Just use 1.1.==
+
+> [!CAUTION]
+> DO NOT USE VERSION 1.2. USE VERSION 1.1 (all versions should be included in the ZIP from the NASA request). The "extrude" functionality of v1.2 did not work for me out of the box, and requires code modifications to make it not segfault. Just use 1.1.
+
+> [!NOTE]
+> If you are having any issues with installation things, please feel free to reach out to me.
 
 Unfortunately, this one is a bit more complicated, but if you follow the included README, it should get you up and running. It does requires you to build an older version of [VTK](https://docs.vtk.org/en/latest/build_instructions/index.html) with certain flags enabled, which is inconvenient at best, and can be really horrifying at its worst. 
 
@@ -60,10 +69,12 @@ Make sure to add the path to the Mesh_Tools 'extrude' binary (mesh_tools-v1.1.0/
 
 To confirm you've installed this correctly, try running the extrude_for_char and extrude_shock examples and see if it breaks.
 
-If you are having any issues with installation things, please feel free to reach out to me.
 
 
-## cfd-meshman-specific setup
+
+
+
+## cfd-meshman-specific notes
 The [current implementation](https://github.com/elliottmckee/cfd-meshman/blob/main/src/gen_blmesh.py) relies on the mesh_convert.py functionality included in Mesh_Tools. This is currently invoked using ['conda run'](https://docs.conda.io/projects/conda/en/latest/commands/run.html) functionality. If you have installed using conda above,you _shouldn't_ have any issue, assuming that the mesh-tools conda environement is named 'mesh_tools_p3p7'.
 
 Once everything is installed, see if the simple cfd-meshman example above works. If any of the examples don't work, you're more than welcome to bug me.

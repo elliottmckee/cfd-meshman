@@ -5,9 +5,9 @@ direction: nominal
 smooth_normals: true
 smooth_normals_iterations: 25
 smooth_null_space: true
-null_space_iterations: 3
+null_space_iterations: 20
 null_space_limit: 2.0
-null_space_relaxation: 0.3
+null_space_relaxation: 0.5
 eigenvector_threshold: 0.5
 smooth_curvature: true
 curvature_factor: 4.5 

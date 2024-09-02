@@ -1,24 +1,26 @@
+[<img src="resource/images/banner_1_full.png">](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/banner_1_full.png?raw=true)
+
 # cfd-meshman
 3D unstructured mesh manufacturing/manipulation for a (currently) GMSH+NASA Mesh_Tools viscous CFD meshing stack:
 - [GMSH](https://gmsh.info/) for surface meshing
 - [NASA Mesh_Tools](https://software.nasa.gov/software/MSC-26648-1) for extruded boundary layer meshes
 - [GMSH](https://gmsh.info/) for farfield volume meshing
 
-cfd-meshman consists of the python tools required to get these to talk to each other, to build combined extruded-boundary-layer + farfield volume meshes with only a handful of lines of code (see [example_simple.py](https://github.com/elliottmckee/cfd-meshman/blob/main/example_simple.py)).
+cfd-meshman consists of the python tools required to get these components to talk to each other, to build combined extruded-boundary-layer + farfield volume meshes with only a handful of lines of code (see [example_simple.py](https://github.com/elliottmckee/cfd-meshman/blob/main/example_simple.py)).
 
-The main components/functionalities are:
+**The goal here is to try and create an acceptable viscous-CFD meshing workflow that is 100% free** (assuming you can access Mesh_Tools through the [NASA Software Catalog/Technology Transfer Program](https://software.nasa.gov/)). 
+
+The main components/functionalities of cfd-meshman are:
 - **Umesh**: a "pythonic" representation of unstructured meshes, that primarily facilitates the conversion of mesh formats (GMSH v2.2 .msh <-> .ugrid)
-- **gen_blmesh.py**: given a surface mesh, uses Mesh_Tools to extrude a boundary layer mesh
-- **gen_farfield.py**: given a boundary layer mesh from above, uses GMSH to generate the farfield mesh outward from the external-most-surface of the boundary layer, to the domain extents, and stitches everything together into a single domain.
+- **gen_blmesh.py**: given a surface mesh, uses NASA Mesh_Tools to extrude a boundary layer mesh
+- **gen_farfield.py**: given a boundary layer mesh (from above), uses GMSH to generate the farfield mesh between the boundary-layer and domain extents- and stitches everything together into a single domain.
 
-This workflow is by no means perfect. It is a WIP and thus has limitations and can be brittle; but is decent enough for my personal usage. 
-
-**The goal here is to try and create an acceptable viscous-CFD meshing workflow that is 100% free** (assuming you are eligible for access to Mesh_Tools through the [NASA Software Catalog/Technology Transfer Program](https://software.nasa.gov/). 
+This workflow is by no means perfect. It is a WIP and thus has limitations and can be brittle; but is decent enough for my personal usage. I have tried to make it somewhat modular, so if you have a better solution for any of these steps, you can ideally just use what you need.
 
 _I welcome any help and/or feedback :)_
 
 > [!NOTE]
-> LINK TO BLOG POST TO BE ADDED HERE 
+> LINK TO LONGER-FORM BLOG POST TO BE ADDED HERE 
 
 
 
@@ -35,13 +37,13 @@ _I welcome any help and/or feedback :)_
 Just showing the simplest implementation of extruded boundary-layer + tet farfield:
 | **Near** | **Detail** | **Far** |
 | ----------- | ----------- | ----------- |
-| [<img src="resource/example_simple_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | [<img src="resource/example_simple_2.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_2.png?raw=true) | [<img src="resource/example_simple_3.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_3.png?raw=true) |
+| [<img src="resource/images/example_simple_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/example_simple_1.png?raw=true) | [<img src="resource/images/example_simple_2.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/example_simple_2.png?raw=true) | [<img src="resource/images/example_simple_3.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/example_simple_3.png?raw=true) |
 
 ## [example_advanced.py](https://github.com/elliottmckee/cfd-meshman/blob/main/example_advanced.py)
 Showing the use of GMSH size fields to do things like refine the fins/wake or increase resolution at nose tip (note that size fields get applied congrously between the surface and volume meshes):
 | **Near** |
 | ----------- |
-| [<img src="resource/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_advanced_1.png?raw=true) | 
+| [<img src="resource/images/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/example_advanced_1.png?raw=true) | 
 
 
 
@@ -51,24 +53,24 @@ Showing the use of GMSH size fields to do things like refine the fins/wake or in
 
 
 # Installation
-I have only used this on Linux. If you're on Windows i'd reccomend using WSL2.
+I have only used this on Linux. If you're on Windows i'd recommend using WSL2.
 
-The main dependency here that requires instruction is NASA Mesh_Tools. I reccomend getting this installed and verifying it is working before playing around with this repo (as I have somewhat outlined below).
+The main dependency here that requires instruction is NASA Mesh_Tools. I recommend getting this installed and verifying it is working before playing around with this repo (as I have somewhat outlined below).
 
 > [!NOTE]
-> If you are having any issues with installation things, please feel free to reach out to me.
+> If you are having any issues with installation things, please feel free to reach out to me ([elliottmckee](https://github.com/elliottmckee)).
 
 
 ## [NASA Mesh_Tools](https://software.nasa.gov/software/MSC-26648-1)
 
 > [!CAUTION]
-> DO NOT USE VERSION 1.2. USE VERSION 1.1 (all versions should be included in the ZIP from the NASA request). The "extrude" functionality of v1.2 did not work for me out of the box, and requires code modifications to make it not segfault. Just use 1.1.
+> DO **NOT** USE VERSION 1.2. USE VERSION 1.1 (all versions should be included in the ZIP from the NASA request). The "extrude" functionality of v1.2 did not work for me out of the box, and requires code modifications to make it not segfault. Just use 1.1.
 
 You have to request this from the NASA Software Catalog. See links above.
 
 Unfortunately, this one is a bit complicated to install, but if you follow the README included with it, it should get you up and running. It does requires you to build an older version of [VTK](https://docs.vtk.org/en/latest/build_instructions/index.html) with certain flags enabled, which is inconvenient at best, and can be really horrifying at its worst. 
 
-I reccomend just using the default Anaconda install for simplicity (**This is actually required for cfd-meshman to work currently**. I used miniconda personally, but shouldn't really matter though). 
+I recomend just using the default Anaconda install for simplicity (**This is actually required for cfd-meshman to work currently**. I used miniconda personally, but shouldn't really matter though). 
 
 Make sure to add the path to the Mesh_Tools 'extrude' binary (mesh_tools-v1.1.0/bin/extrude) to the system PATH.
 
@@ -77,7 +79,7 @@ To confirm you've installed this correctly, try running the included extrude_for
 
 ## cfd-meshman
 1. Clone this repo
-2. (reccomended) create a virtual environment
+2. (recommended) create a virtual environment
 3. cd into repo, `pip install -r requirements.txt`
 4. Once installed, see if the simple cfd-meshman example above works. If any of the examples don't work, you're more than welcome to bug me.
 

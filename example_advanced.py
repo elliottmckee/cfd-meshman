@@ -34,7 +34,7 @@ gmsh.model.mesh.setSize(points_dimTags, 0.008)
 # Lets pass some additional size-fields in 
 # This will get applied congrously to the surface and volume meshes!
 # This dictionary mirrors how you specify size fields in the GMSH api
-size_fields_dict = {'Cylinder':{'VIn':      0.03,
+size_fields_dict = {'Cylinder':{'VIn':      0.02,
                                 'VOut':     1e22,
                                 'XAxis':    0.45,
                                 'YAxis':    0.0,
@@ -45,8 +45,8 @@ size_fields_dict = {'Cylinder':{'VIn':      0.03,
                                 'Radius':   0.3},
                     'Ball':{'Radius':   0.05,
                             'Thickness':0.05,
-                            'VIn':      0.02,
-                            'VOut':     1e22,
+                            'VIn':      0.015,
+                            'VOut':     1e22,           
                             'XCenter':  0.718}}
 
 # have to massage a bit into gmsh format

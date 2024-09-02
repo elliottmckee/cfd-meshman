@@ -38,7 +38,7 @@ Just showing the simplest implementation of "extrude boundary layer and generate
 Showing the use of GMSH size fields to do things like refine the wake or increase resolution at nose tip (note that size fields get applied congrously between the surface and volume meshes):
 | **Near** |
 | ----------- |
-| [<img src="resource/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | 
+| [<img src="resource/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_advanced_1.png?raw=true) | 
 
 
 

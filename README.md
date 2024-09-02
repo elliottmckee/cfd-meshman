@@ -17,6 +17,9 @@ This workflow is by no means perfect. It is a WIP and thus has limitations and c
 
 _I welcome any help and/or feedback :)_
 
+> [!CAUTION]
+> ADD LINK TO BLOG POST
+
 
 # Limitations
 - cfd-meshman only supports triangular surfaces meshes right now. Going to fix shortly. All the other tools should be able to handle quads fine.
@@ -32,7 +35,7 @@ Just showing the simplest implementation of "extrude boundary layer and generate
 | [<img src="resource/example_simple_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | [<img src="resource/example_simple_2.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_2.png?raw=true) | [<img src="resource/example_simple_3.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_3.png?raw=true) |
 
 ## example_advanced.py
-Showing the use of GMSH size fields to do things like refine the wake or increase resolution at nose tip:
+Showing the use of GMSH size fields to do things like refine the wake or increase resolution at nose tip (note that size fields get applied congrously between the surface and volume meshes):
 | **Near** |
 | ----------- |
 | [<img src="resource/example_advanced_1.png" width=300>](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/example_simple_1.png?raw=true) | 
@@ -81,8 +84,10 @@ To confirm you've installed this correctly, try running the extrude_for_char and
 
 # Usage
 - See examples. 
-- If you need to modify the Mesh_Tools extrusion parameters (this is likely, it can be a bit finicky about these), modify [extrude_config.py](https://github.com/elliottmckee/cfd-meshman/blob/main/src/extrude_config.py). 
+- If you need to modify the Mesh_Tools extrusion parameters (this is likely, it can be a bit finicky about these), modify [extrude_config.py](https://github.com/elliottmckee/cfd-meshman/blob/main/src/extrude_config.py).
 
+> [!CAUTION]
+> ADD QUICK NOTES ON HOW TO GET MAPBC FOR FUN3D
 
 # Other useful things
 - [meshio](https://github.com/nschloe/meshio) _can_ be useful for translating meshes into other formats. This is probably better than my own custom .msh<->.ugrid conversion functions, but I just couldn't get it to do what I needed it to at the time.

@@ -91,6 +91,16 @@ To confirm you've installed this correctly, try running the included extrude_for
 - See examples. 
 - If you need to modify the Mesh_Tools extrusion parameters (this is likely, it can be a bit finicky about these), modify [extrude_config.py](https://github.com/elliottmckee/cfd-meshman/blob/main/src/extrude_config.py).
 
+
+# Tips
+Mesh_Tools 'extrude':
+- The default extrude_config.py inputs seem to work fine-ish in my experience, but often need fiddling. I don't claim to know what all of them mean, though.
+- This will try and extrude as far as you tell it, and maintains a fixed extrude sizing across all elements. If you have a surface mesh with both large and small faces, and you want to extrude the big ones to near-isotropy, you're going to have some very high aspect-ratio cells grown from the smaller faces. 
+- If extrusion is failing, try:
+  - decreasing null space relaxation
+  - increasing/decreasing null space iterations (or try disabling it?)
+  - increasing/decreasing curvature_factor
+
 > [!NOTE]
 > If you're using FUN3D, the wall is tagged with 1, the farfield is tagged with 3
 > In MAPBC file format: 
@@ -99,6 +109,7 @@ To confirm you've installed this correctly, try running the included extrude_for
 1	3000	wall
 3	5050	farfield
 ```
+
 
 # Other useful things
 - [meshio](https://github.com/nschloe/meshio) _can_ be useful for translating meshes into other formats. This is probably better than my own custom .msh<->.ugrid conversion functions, but I just couldn't get it to do what I needed it to at the time.

@@ -26,6 +26,7 @@ _I welcome any help and/or feedback :)_
 
 # Limitations
 - cfd-meshman only supports triangular surfaces meshes right now. Going to fix shortly. All the other tools (Mesh_Tools, GMSH) should be able to handle quads just fine.
+- this spits out meshes in GMSH .msh and/or (FUN3D) .ugrid formats. If you need another format for your solver, would recommend trying [meshio](https://github.com/nschloe/meshio).
 - no support for symmetry planes yet, although Mesh_Tools, GMSH should be able to support them.
 - this is currently focused on external-aero workflows, and there are a good few assumptions baked-in currently for domain tagging. See Usage below.
 

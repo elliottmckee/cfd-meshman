@@ -68,6 +68,8 @@ The main dependency here that requires instruction is NASA Mesh_Tools. I recomme
 
 You have to request this from the NASA Software Catalog. See links above.
 
+See [this paper](https://ntrs.nasa.gov/api/citations/20190000067/downloads/20190000067.pdf) for more detail on Mesh_Tools itself.
+
 Unfortunately, this one is a bit complicated to install, but if you follow the README included with it, it should get you up and running. It does requires you to build an older version of [VTK](https://docs.vtk.org/en/latest/build_instructions/index.html) with certain flags enabled, which is inconvenient at best, and can be really horrifying at its worst. 
 
 I recomend just using the default Anaconda install for simplicity (**This is actually required for cfd-meshman to work currently**. I used miniconda personally, but shouldn't really matter though). 

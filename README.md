@@ -100,6 +100,7 @@ Mesh_Tools 'extrude':
 - The default extrude_config.py inputs seem to work fine-ish in my experience, but often need fiddling. I don't claim to know what all of them mean, though.
 - This will try and extrude as far as you tell it, and maintains a fixed extrude sizing across all elements. If you have a surface mesh with both large and small faces, and you want to extrude the big ones to near-isotropy, you're going to have some very high aspect-ratio cells grown from the smaller faces. 
 - If extrusion is failing, try:
+  - reducing size/number of layers, and/or increasing these incrementally
   - decreasing null space relaxation
   - increasing/decreasing null space iterations (or try disabling it?)
   - increasing/decreasing curvature_factor

@@ -1,6 +1,9 @@
 [<img src="resource/images/banner_1_full.png">](https://github.com/elliottmckee/cfd-meshman/blob/main/resource/images/banner_1_full.png?raw=true)
 
 # cfd-meshman
+
+Update 9/12/2025 - I am currently working on a unified tool in Rust so this workflow is less clunky.
+
 3D unstructured mesh manufacturing/manipulation for a (currently) GMSH+NASA Mesh_Tools viscous CFD meshing stack:
 - [GMSH](https://gmsh.info/) for surface meshing
 - [NASA Mesh_Tools](https://software.nasa.gov/software/MSC-26648-1) for extruded boundary layer meshes
